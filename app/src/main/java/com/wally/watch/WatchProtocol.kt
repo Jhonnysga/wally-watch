@@ -141,8 +141,8 @@ object WatchProtocol {
     fun iconIdForPackage(pkg: String): Int = when (pkg) {
         "com.whatsapp" -> 8
         "com.whatsapp.w4b" -> 8
-        "org.telegram.messenger" -> 18
-        "org.telegram.plus" -> 18
+        "org.telegram.messenger" -> 8 // Telegram usa icono WhatsApp (verificado)
+        "org.telegram.plus" -> 8
         "com.facebook.orca" -> 5   // Messenger
         "com.instagram.android" -> 6
         "com.facebook.katana" -> 7 // Facebook

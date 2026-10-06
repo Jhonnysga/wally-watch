@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
 
         // Título con versión
         root.addView(TextView(this).apply {
-            text = "Wally Watch v15"
+            text = "Wally Watch v16"
             textSize = 24f
         })
 
@@ -194,7 +194,7 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
             "Telegram",
             "Prueba de notificación OK"
         )
-        addLog("Prueba enviada (Telegram/icon 18)")
+        addLog("Prueba enviada (Telegram/icon 8)")
     }
 
     // ---------- BleManager.Listener ----------
