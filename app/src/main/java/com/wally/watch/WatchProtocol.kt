@@ -33,6 +33,24 @@ object WatchProtocol {
         buildFrame(CMD_NOTIFY, 10, ByteArray(0))
 
     /**
+     * ACK de respuesta (0xDC) para frames del reloj.
+     * Formato: DC | len | CMD | 01 | KEY | 00 01 | 00
+     */
+    fun buildAck(cmd: Int, key: Int): ByteArray {
+        val totalLen = 1 + 2 + 1 + 1 + 1 + 2 + 1
+        val lenField = totalLen - 3
+        val buf = ByteBuffer.allocate(totalLen).order(ByteOrder.BIG_ENDIAN)
+        buf.put(0xDC.toByte())
+        buf.putShort(lenField.toShort())
+        buf.put(cmd.toByte())
+        buf.put(0x01.toByte())
+        buf.put(key.toByte())
+        buf.putShort(1.toShort())
+        buf.put(0x00.toByte())
+        return buf.array()
+    }
+
+    /**
      * Sincronizar hora (18,1): u32 BE con bits
      * [(año-2000):6][mes:4][día:5][hora:5][min:6][seg:6]
      */

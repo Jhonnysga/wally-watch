@@ -278,9 +278,17 @@ class BleManager(private val context: Context) {
             characteristic: BluetoothGattCharacteristic
         ) {
             val data = characteristic.value
-            if (data != null) {
+            if (data != null && data.isNotEmpty()) {
                 val hex = data.joinToString("") { "%02x".format(it) }
                 log("RX del reloj (${data.size} bytes): $hex")
+                // Responder ACK (0xDC) a frames del reloj (0xCD)
+                if (data[0] == 0xCD.toByte() && data.size >= 7) {
+                    val cmd = data[3].toInt() and 0xFF
+                    val key = data[5].toInt() and 0xFF
+                    log("Enviando ACK para CMD=$cmd KEY=$key")
+                    val ack = WatchProtocol.buildAck(cmd, key)
+                    sendFrame(ack)
+                }
             }
         }
     }
