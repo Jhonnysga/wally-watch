@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
 
         // Título con versión
         root.addView(TextView(this).apply {
-            text = "Wally Watch v8"
+            text = "Wally Watch v9"
             textSize = 24f
         })
 
@@ -178,7 +178,7 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
         }
         ble.sendNotification(
             WatchProtocol.iconIdForPackage("org.telegram.messenger"),
-            "Wally Watch",
+            "Telegram",
             "Prueba de notificación OK"
         )
         addLog("Prueba enviada (Telegram/icon 18)")
