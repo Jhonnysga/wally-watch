@@ -20,8 +20,49 @@ object WatchProtocol {
     const val CMD_NOTIFY = 18
     const val KEY_NOTIFY_MSG = 18
     const val KEY_NOTIFY_CALL = 17
+    const val KEY_TIME_SYNC = 1
+    const val KEY_USER_INFO = 4
 
     const val MAX_TEXT_CHARS = 300
+
+    /**
+     * Handshake de pairing de app: SwitchProtocol(18,10,2).
+     * Framing alterno de 9 bytes observado en el código.
+     */
+    fun buildAppPair(): ByteArray =
+        byteArrayOf(0xCD.toByte(), 0x01, 0x06, 0x12, 0x01, 0x0A, 0x00, 0x01, 0x02)
+
+    /**
+     * Sincronizar hora (18,1): u32 BE con bits
+     * [(año-2000):6][mes:4][día:5][hora:5][min:6][seg:6]
+     */
+    fun buildTimeSync(
+        year: Int, month: Int, day: Int,
+        hour: Int, minute: Int, second: Int
+    ): ByteArray {
+        val v = ((year - 2000) shl 26) or
+                (month shl 22) or
+                (day shl 17) or
+                (hour shl 12) or
+                (minute shl 6) or
+                second
+        val data = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN)
+        data.putInt(v)
+        return buildFrame(CMD_NOTIFY, KEY_TIME_SYNC, data.array())
+    }
+
+    /** Hora actual del teléfono como comando (18,1). */
+    fun buildTimeSyncNow(): ByteArray {
+        val c = java.util.Calendar.getInstance()
+        return buildTimeSync(
+            c.get(java.util.Calendar.YEAR),
+            c.get(java.util.Calendar.MONTH) + 1,
+            c.get(java.util.Calendar.DAY_OF_MONTH),
+            c.get(java.util.Calendar.HOUR_OF_DAY),
+            c.get(java.util.Calendar.MINUTE),
+            c.get(java.util.Calendar.SECOND)
+        )
+    }
 
     /**
      * Construye un frame completo: CD | len16BE | CMD | 01 | KEY | datalen16BE | DATA

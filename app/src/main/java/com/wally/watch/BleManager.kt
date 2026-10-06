@@ -145,7 +145,34 @@ class BleManager(private val context: Context) {
             if (writeChar == null) {
                 log("Característica de escritura no encontrada"); return
             }
-            // Pedir MTU amplio para frames grandes
+            // Habilitar notificaciones en 6E400003 (CCCD 0x2902 = 01 00).
+            // SuperBand lo hace siempre; el reloj lo espera en el handshake.
+            val notifyChar = service.getCharacteristic(
+                UUID.fromString(WatchProtocol.UART_NOTIFY_CHAR)
+            )
+            if (notifyChar != null) {
+                gatt.setCharacteristicNotification(notifyChar, true)
+                val cccd = notifyChar.getDescriptor(
+                    UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+                )
+                if (cccd != null) {
+                    cccd.value = byteArrayOf(0x01, 0x00)
+                    log("Habilitando notificaciones UART...")
+                    gatt.writeDescriptor(cccd)
+                    // El resto (MTU + init) continúa en onDescriptorWrite
+                    return
+                }
+            }
+            // Sin CCCD: seguir directo al MTU
+            gatt.requestMtu(247)
+        }
+
+        override fun onDescriptorWrite(
+            gatt: BluetoothGatt,
+            descriptor: android.bluetooth.BluetoothGattDescriptor,
+            status: Int
+        ) {
+            log("CCCD escrito: $status")
             gatt.requestMtu(247)
         }
 
@@ -173,6 +200,14 @@ class BleManager(private val context: Context) {
         val name = gatt.device.name ?: gatt.device.address
         log("Listo para enviar al reloj ($name)")
         handler.post { listener?.onStateChanged(true, name) }
+        // Secuencia de inicialización como SuperBand:
+        // 1. Pairing de app, 2. Sincronizar hora. Luego notificaciones.
+        log("Enviando handshake de app...")
+        sendFrame(WatchProtocol.buildAppPair())
+        handler.postDelayed({
+            log("Sincronizando hora...")
+            sendFrame(WatchProtocol.buildTimeSyncNow())
+        }, 500)
         pumpQueue()
     }
 
