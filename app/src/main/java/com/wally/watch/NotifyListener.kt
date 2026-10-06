@@ -39,16 +39,34 @@ class NotifyListener : NotificationListenerService() {
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
-        val body = (if (bigText.isNotEmpty()) bigText else text).trim()
-        if (body.isEmpty() && title.isEmpty()) return
+        var body = (if (bigText.isNotEmpty()) bigText else text).trim()
+
+        // Telegram y otras usan MessagingStyle: extraer de EXTRA_MESSAGES
+        if (body.isEmpty()) {
+            val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+            if (messages != null) {
+                val lastMsg = messages.lastOrNull()
+                val bundle = lastMsg as? android.os.Bundle
+                val msgText = bundle?.getCharSequence("text")?.toString().orEmpty()
+                if (msgText.isNotEmpty()) body = msgText.trim()
+            }
+        }
+        // Título de conversación para MessagingStyle
+        val convTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString().orEmpty()
+        val finalTitle = when {
+            title.isNotEmpty() -> title
+            convTitle.isNotEmpty() -> convTitle
+            else -> ""
+        }
+        if (body.isEmpty() && finalTitle.isEmpty()) return
 
         val iconId = WatchProtocol.iconIdForPackage(pkg)
         val label = WatchProtocol.appLabel(pkg)
 
         val ble = BleManager.get(this)
         if (ble.connected) {
-            ble.sendNotification(iconId, title.ifEmpty { label }, body)
-            Log.d(TAG, "→ reloj [$label] $title")
+            ble.sendNotification(iconId, finalTitle.ifEmpty { label }, body)
+            Log.d(TAG, "→ reloj [$label] $finalTitle")
         } else {
             Log.d(TAG, "Reloj no conectado, notificación de $label en espera")
         }
