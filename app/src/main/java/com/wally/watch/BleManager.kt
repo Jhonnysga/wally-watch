@@ -272,6 +272,17 @@ class BleManager(private val context: Context) {
             }
             pumpQueue()
         }
+
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic
+        ) {
+            val data = characteristic.value
+            if (data != null) {
+                val hex = data.joinToString("") { "%02x".format(it) }
+                log("RX del reloj (${data.size} bytes): $hex")
+            }
+        }
     }
 
     private fun onReady(gatt: BluetoothGatt) {
