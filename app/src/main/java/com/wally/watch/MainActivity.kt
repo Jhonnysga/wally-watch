@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
 
         // Título con versión
         root.addView(TextView(this).apply {
-            text = "Wally Watch v20"
+            text = "Wally Watch v21"
             textSize = 24f
         })
 
@@ -102,15 +102,12 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
             textSize = 16f
             setPadding(0, 24, 0, 8)
         })
-        for ((pkg, label) in Prefs.trackedApps.distinctBy { it.second }) {
+        for ((pkg, label) in Prefs.trackedApps) {
             val sw = Switch(this).apply {
                 text = label
                 isChecked = Prefs.isAppEnabled(this@MainActivity, pkg)
                 setOnCheckedChangeListener { _, checked ->
-                    // Aplicar a todos los paquetes con esta etiqueta
-                    Prefs.trackedApps.filter { it.second == label }.forEach { (p, _) ->
-                        Prefs.setAppEnabled(this@MainActivity, p, checked)
-                    }
+                    Prefs.setAppEnabled(this@MainActivity, pkg, checked)
                     addLog("$label ${if (checked) "activado" else "desactivado"}")
                 }
             }

@@ -23,7 +23,6 @@ object Prefs {
         "com.google.android.gm" to "Gmail",
         "com.android.mms" to "SMS",
         "com.meta.ai" to "Muse",
-        "ai.muse.mobile" to "Muse",
     )
 
     private lateinit var prefs: SharedPreferences
@@ -38,15 +37,10 @@ object Prefs {
         get() = prefs.getString(KEY_MAC, "9A:22:33:04:80:E8") ?: "9A:22:33:04:80:E8"
         set(v) = prefs.edit().putString(KEY_MAC, v).apply()
 
-    /** ¿Está habilitada una app? Las no listadas siempre se reenvían. */
+    /** Por defecto todas las apps están activadas. */
     fun isAppEnabled(context: Context, pkg: String): Boolean {
         init(context)
-        val isTracked = trackedApps.any { it.first == pkg }
-        return if (isTracked) {
-            prefs.getBoolean(PREFIX_APP + pkg, true)
-        } else {
-            true // Todas las no listadas se reenvían siempre
-        }
+        return prefs.getBoolean(PREFIX_APP + pkg, true)
     }
 
     fun setAppEnabled(context: Context, pkg: String, enabled: Boolean) {
