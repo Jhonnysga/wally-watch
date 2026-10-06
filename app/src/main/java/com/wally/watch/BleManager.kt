@@ -42,11 +42,12 @@ class BleManager(private val context: Context) {
 
     private var gatt: BluetoothGatt? = null
     private var writeChar: BluetoothGattCharacteristic? = null
-    private var mtu = 23
+    private var mtu = 23 // SuperBand nunca pide MTU; usamos el defecto
     private val isConnected = AtomicBoolean(false)
     private val writeQueue = ConcurrentLinkedQueue<ByteArray>()
     private val writeInFlight = AtomicBoolean(false)
     private var reconnectAttempts = 0
+    private var cccdTimeoutRunnable: Runnable? = null
 
     val connected: Boolean get() = isConnected.get()
 
@@ -97,9 +98,42 @@ class BleManager(private val context: Context) {
     }
 
     fun connect(device: BluetoothDevice) {
-        log("Conectando a ${device.address}...")
+        log("Conectando a ${device.address} (bond=${bondStateName(device.bondState)})...")
+        // Si no hay vínculo BLE, crearlo primero (SuperBand lo hace siempre)
+        if (device.bondState != BluetoothDevice.BOND_BONDED) {
+            log("Creando vínculo BLE...")
+            try {
+                device.createBond()
+            } catch (e: Exception) {
+                log("createBond falló: ${e.message}")
+            }
+            // Esperar el vínculo antes de GATT (reintento en 5s)
+            handler.postDelayed({
+                if (!isConnected.get()) {
+                    log("Reintentando GATT tras vínculo...")
+                    doConnectGatt(device)
+                }
+            }, 5000)
+            return
+        }
+        doConnectGatt(device)
+    }
+
+    private fun doConnectGatt(device: BluetoothDevice) {
         gatt?.close()
         gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+        // Timeout de seguridad: si en 30s no conectó, avisar
+        handler.postDelayed({
+            if (!isConnected.get() && gatt != null) {
+                log("Timeout de conexión GATT (30s). Revisa que el reloj tenga Bluetooth activo y esté cerca.")
+            }
+        }, 30_000)
+    }
+
+    private fun bondStateName(state: Int): String = when (state) {
+        BluetoothDevice.BOND_BONDED -> "vinculado"
+        BluetoothDevice.BOND_BONDING -> "vinculando"
+        else -> "no vinculado"
     }
 
     fun connectToKnown() {
@@ -137,19 +171,58 @@ class BleManager(private val context: Context) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 log("Descubrimiento falló: $status"); return
             }
-            val service = gatt.getService(UUID.fromString(WatchProtocol.UART_SERVICE))
-            if (service == null) {
-                log("Servicio Nordic UART no encontrado"); return
+            // Listar todos los servicios para diagnóstico
+            log("Servicios encontrados: ${gatt.services.size}")
+            for (svc in gatt.services) {
+                val suuid = svc.uuid.toString().lowercase()
+                log("  SVC: $suuid")
+                for (ch in svc.characteristics) {
+                    val props = mutableListOf<String>()
+                    val p = ch.properties
+                    if (p and BluetoothGattCharacteristic.PROPERTY_READ != 0) props.add("R")
+                    if (p and BluetoothGattCharacteristic.PROPERTY_WRITE != 0) props.add("W")
+                    if (p and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0) props.add("WN")
+                    if (p and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0) props.add("N")
+                    if (p and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0) props.add("I")
+                    log("    CHR: ${ch.uuid.toString().lowercase()} [${props.joinToString(",")}]")
+                }
             }
+            val service = gatt.getService(UUID.fromString(WatchProtocol.UART_SERVICE))
+                ?: findUartLikeService(gatt)
+            if (service == null) {
+                log("Servicio Nordic UART no encontrado")
+                return
+            }
+            if (!service.uuid.toString().equals(WatchProtocol.UART_SERVICE, ignoreCase = true)) {
+                log("Usando servicio alterno: ${service.uuid}")
+            }
+            // Buscar característica de escritura (preferir la UUID estándar)
             writeChar = service.getCharacteristic(UUID.fromString(WatchProtocol.UART_WRITE_CHAR))
+            if (writeChar == null) {
+                // Fallback: primera característica con propiedad WRITE
+                writeChar = service.characteristics.firstOrNull { ch ->
+                    ch.properties and (BluetoothGattCharacteristic.PROPERTY_WRITE or
+                        BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0
+                }
+                if (writeChar != null) {
+                    log("Usando característica alterna: ${writeChar!!.uuid}")
+                }
+            }
             if (writeChar == null) {
                 log("Característica de escritura no encontrada"); return
             }
-            // Habilitar notificaciones en 6E400003 (CCCD 0x2902 = 01 00).
+            // Habilitar notificaciones en la característica de notify.
             // SuperBand lo hace siempre; el reloj lo espera en el handshake.
-            val notifyChar = service.getCharacteristic(
+            var notifyChar = service.getCharacteristic(
                 UUID.fromString(WatchProtocol.UART_NOTIFY_CHAR)
             )
+            if (notifyChar == null) {
+                // Fallback: primera con propiedad NOTIFY/INDICATE
+                notifyChar = service.characteristics.firstOrNull { ch ->
+                    ch.properties and (BluetoothGattCharacteristic.PROPERTY_NOTIFY or
+                        BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0
+                }
+            }
             if (notifyChar != null) {
                 gatt.setCharacteristicNotification(notifyChar, true)
                 val cccd = notifyChar.getDescriptor(
@@ -157,14 +230,14 @@ class BleManager(private val context: Context) {
                 )
                 if (cccd != null) {
                     cccd.value = byteArrayOf(0x01, 0x00)
-                    log("Habilitando notificaciones UART...")
+                    log("Habilitando notificaciones...")
                     gatt.writeDescriptor(cccd)
-                    // El resto (MTU + init) continúa en onDescriptorWrite
+                    // El resto continúa en onDescriptorWrite
                     return
                 }
             }
-            // Sin CCCD: seguir directo al MTU
-            gatt.requestMtu(247)
+            // Sin CCCD: ir directo a listo (sin pedir MTU, como SuperBand)
+            onReady(gatt)
         }
 
         override fun onDescriptorWrite(
@@ -173,7 +246,7 @@ class BleManager(private val context: Context) {
             status: Int
         ) {
             log("CCCD escrito: $status")
-            gatt.requestMtu(247)
+            onReady(gatt)
         }
 
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
@@ -268,6 +341,31 @@ class BleManager(private val context: Context) {
             log("writeCharacteristic rechazado")
             handler.postDelayed({ pumpQueue() }, 500)
         }
+    }
+
+    /**
+     * Busca un servicio parecido a UART si el Nordic estándar no está:
+     * cualquiera con característica de escritura y otra de notificación.
+     */
+    private fun findUartLikeService(gatt: BluetoothGatt): android.bluetooth.BluetoothGattService? {
+        for (svc in gatt.services) {
+            val uuid = svc.uuid.toString().lowercase()
+            // Omitir servicios estándar que no son de datos
+            if (uuid.startsWith("00001800") || uuid.startsWith("00001801") ||
+                uuid.startsWith("0000180f") || uuid.startsWith("0000180a")
+            ) continue
+            var hasWrite = false
+            var hasNotify = false
+            for (ch in svc.characteristics) {
+                val p = ch.properties
+                if (p and (BluetoothGattCharacteristic.PROPERTY_WRITE or
+                           BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0) hasWrite = true
+                if (p and (BluetoothGattCharacteristic.PROPERTY_NOTIFY or
+                           BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0) hasNotify = true
+            }
+            if (hasWrite && hasNotify) return svc
+        }
+        return null
     }
 
     companion object {
