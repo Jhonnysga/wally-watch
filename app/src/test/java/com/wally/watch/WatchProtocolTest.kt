@@ -43,7 +43,7 @@ class WatchProtocolTest {
         // Primeros bytes: estructura verificada
         // cd | 0027 (len=39) | 12 | 01 | 12 | 0022 (datalen=34) | 08000000 | "WhatsApp:"
         val expected = "cd002712011200220800000057686174734170703a"
-        val actual = frame.take(20).joinToString("") { "%02x".format(it) }
+        val actual = frame.take(20).joinToString("") { "%02x".format(it.toInt() and 0xFF) }
         assertEquals(expected, actual)
     }
 
