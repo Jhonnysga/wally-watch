@@ -166,7 +166,13 @@ class BleManager(private val context: Context) {
                 } catch (e: Exception) {
                     log("No se pudo limpiar caché: ${e.message}")
                 }
-                handler.postDelayed({ gatt.discoverServices() }, 500)
+                handler.postDelayed({
+                    val started = gatt.discoverServices()
+                    log("discoverServices() iniciado: $started")
+                    if (!started) {
+                        log("ERROR: no se pudo iniciar descubrimiento")
+                    }
+                }, 500)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 isConnected.set(false)
                 writeChar = null

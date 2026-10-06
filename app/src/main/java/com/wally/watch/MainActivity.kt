@@ -50,9 +50,9 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
             setPadding(32, 32, 32, 32)
         }
 
-        // Título
+        // Título con versión
         root.addView(TextView(this).apply {
-            text = "Wally Watch"
+            text = "Wally Watch v4"
             textSize = 24f
         })
 
