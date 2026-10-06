@@ -290,18 +290,12 @@ class BleManager(private val context: Context) {
         val name = gatt.device.name ?: gatt.device.address
         log("Listo para enviar al reloj ($name)")
         handler.post { listener?.onStateChanged(true, name) }
-        // Secuencia de inicialización como SuperBand:
-        // 1. Pairing de app, 2. Sincronizar hora. Luego notificaciones.
-        log("Enviando handshake de app...")
-        sendFrame(WatchProtocol.buildAppPair())
+        // Secuencia mínima: solo hora y notificación.
+        // El pairing (18,10) de SuperBand va por SPP, no BLE.
         handler.postDelayed({
             log("Sincronizando hora...")
             sendFrame(WatchProtocol.buildTimeSyncNow())
         }, 500)
-        handler.postDelayed({
-            log("Enviando datos de usuario...")
-            sendFrame(WatchProtocol.buildUserInfo())
-        }, 1000)
         pumpQueue()
     }
 
