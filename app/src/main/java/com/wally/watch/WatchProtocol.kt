@@ -13,9 +13,9 @@ import java.nio.ByteOrder
  */
 object WatchProtocol {
 
-    const val UART_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
-    const val UART_WRITE_CHAR = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
-    const val UART_NOTIFY_CHAR = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
+    const val UART_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9d"
+    const val UART_WRITE_CHAR = "6e400002-b5a3-f393-e0a9-e50e24dcca9d"
+    const val UART_NOTIFY_CHAR = "6e400003-b5a3-f393-e0a9-e50e24dcca9d"
 
     const val CMD_NOTIFY = 18
     const val KEY_NOTIFY_MSG = 18
