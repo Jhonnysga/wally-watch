@@ -26,11 +26,11 @@ object WatchProtocol {
     const val MAX_TEXT_CHARS = 300
 
     /**
-     * Handshake de pairing de app: SwitchProtocol(18,10,2).
-     * Framing alterno de 9 bytes observado en el código.
+     * Handshake de pairing de app: (18,10) sin payload.
+     * Formato estándar: CD 00 05 12 01 0A 00 00 (8 bytes).
      */
     fun buildAppPair(): ByteArray =
-        byteArrayOf(0xCD.toByte(), 0x01, 0x06, 0x12, 0x01, 0x0A, 0x00, 0x01, 0x02)
+        buildFrame(CMD_NOTIFY, 10, ByteArray(0))
 
     /**
      * Sincronizar hora (18,1): u32 BE con bits
