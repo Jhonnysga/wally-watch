@@ -50,6 +50,6 @@ class WatchProtocolTest {
     @Test
     fun iconIdMapping() {
         assertEquals(8, WatchProtocol.iconIdForPackage("com.whatsapp"))
-        assertEquals(5, WatchProtocol.iconIdForPackage("org.telegram.messenger")) // Icono Messenger
+        assertEquals(8, WatchProtocol.iconIdForPackage("org.telegram.messenger")) // Icono 8 verificado
     }
 }

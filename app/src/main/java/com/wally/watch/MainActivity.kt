@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
 
         // Título con versión
         root.addView(TextView(this).apply {
-            text = "Wally Watch v19"
+            text = "Wally Watch v20"
             textSize = 24f
         })
 
