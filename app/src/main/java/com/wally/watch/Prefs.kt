@@ -22,7 +22,12 @@ object Prefs {
         "com.instagram.android" to "Instagram",
         "com.google.android.gm" to "Gmail",
         "com.android.mms" to "SMS",
+        "com.meta.ai" to "Muse",
+        "ai.muse.mobile" to "Muse",
     )
+
+    /** Clave especial para apps no listadas. */
+    const val KEY_OTHER_APPS = "app_enabled__other"
 
     private lateinit var prefs: SharedPreferences
 
@@ -36,15 +41,21 @@ object Prefs {
         get() = prefs.getString(KEY_MAC, "9A:22:33:04:80:E8") ?: "9A:22:33:04:80:E8"
         set(v) = prefs.edit().putString(KEY_MAC, v).apply()
 
-    /** Por defecto todas las apps rastreadas están activadas. */
+    /** ¿Está habilitada una app? Las no listadas usan el interruptor "Otras". */
     fun isAppEnabled(context: Context, pkg: String): Boolean {
         init(context)
-        return prefs.getBoolean(PREFIX_APP + pkg, true)
+        val isTracked = trackedApps.any { it.first == pkg }
+        return if (isTracked) {
+            prefs.getBoolean(PREFIX_APP + pkg, true)
+        } else {
+            prefs.getBoolean(KEY_OTHER_APPS, true)
+        }
     }
 
     fun setAppEnabled(context: Context, pkg: String, enabled: Boolean) {
         init(context)
-        prefs.edit().putBoolean(PREFIX_APP + pkg, enabled).apply()
+        val key = if (pkg == "__other") KEY_OTHER_APPS else PREFIX_APP + pkg
+        prefs.edit().putBoolean(key, enabled).apply()
     }
 
     fun forwardOngoing(context: Context): Boolean {

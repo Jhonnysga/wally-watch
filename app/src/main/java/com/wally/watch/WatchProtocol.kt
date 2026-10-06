@@ -151,6 +151,7 @@ object WatchProtocol {
         "com.google.android.gm" -> 11 // Gmail
         "com.android.mms" -> 12      // SMS
         "com.google.android.dialer" -> 13
+        "com.meta.ai", "ai.muse.mobile" -> 14 // Muse
         else -> 1 // genérico
     }
 
@@ -163,6 +164,7 @@ object WatchProtocol {
         "com.facebook.katana" -> "Facebook"
         "com.twitter.android" -> "X"
         "com.google.android.gm" -> "Gmail"
+        "com.meta.ai", "ai.muse.mobile" -> "Muse"
         else -> pkg
     }
 }
