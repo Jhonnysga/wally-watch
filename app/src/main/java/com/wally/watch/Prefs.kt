@@ -26,9 +26,6 @@ object Prefs {
         "ai.muse.mobile" to "Muse",
     )
 
-    /** Clave especial para apps no listadas. */
-    const val KEY_OTHER_APPS = "app_enabled__other"
-
     private lateinit var prefs: SharedPreferences
 
     fun init(context: Context) {
@@ -41,21 +38,20 @@ object Prefs {
         get() = prefs.getString(KEY_MAC, "9A:22:33:04:80:E8") ?: "9A:22:33:04:80:E8"
         set(v) = prefs.edit().putString(KEY_MAC, v).apply()
 
-    /** ¿Está habilitada una app? Las no listadas usan el interruptor "Otras". */
+    /** ¿Está habilitada una app? Las no listadas siempre se reenvían. */
     fun isAppEnabled(context: Context, pkg: String): Boolean {
         init(context)
         val isTracked = trackedApps.any { it.first == pkg }
         return if (isTracked) {
             prefs.getBoolean(PREFIX_APP + pkg, true)
         } else {
-            prefs.getBoolean(KEY_OTHER_APPS, true)
+            true // Todas las no listadas se reenvían siempre
         }
     }
 
     fun setAppEnabled(context: Context, pkg: String, enabled: Boolean) {
         init(context)
-        val key = if (pkg == "__other") KEY_OTHER_APPS else PREFIX_APP + pkg
-        prefs.edit().putBoolean(key, enabled).apply()
+        prefs.edit().putBoolean(PREFIX_APP + pkg, enabled).apply()
     }
 
     fun forwardOngoing(context: Context): Boolean {

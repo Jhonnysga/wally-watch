@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
 
         // Título con versión
         root.addView(TextView(this).apply {
-            text = "Wally Watch v16"
+            text = "Wally Watch v17"
             textSize = 24f
         })
 
@@ -116,16 +116,6 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
             }
             root.addView(sw)
         }
-        // Interruptor para apps no listadas
-        val otherSw = Switch(this).apply {
-            text = "Otras apps"
-            isChecked = Prefs.isAppEnabled(this@MainActivity, "dummy.pkg.for.other")
-            setOnCheckedChangeListener { _, checked ->
-                Prefs.setAppEnabled(this@MainActivity, "__other", checked)
-                addLog("Otras apps ${if (checked) "activado" else "desactivado"}")
-            }
-        }
-        root.addView(otherSw)
 
         // Botón de prueba
         val testBtn = Button(this).apply {
