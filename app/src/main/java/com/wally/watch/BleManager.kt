@@ -155,9 +155,18 @@ class BleManager(private val context: Context) {
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                log("GATT conectado, descubriendo servicios...")
+                log("GATT conectado, limpiando caché y descubriendo servicios...")
                 reconnectAttempts = 0
-                handler.postDelayed({ gatt.discoverServices() }, 300)
+                // Limpiar caché BLE de Android (API oculta) para forzar
+                // descubrimiento fresco; si no, puede devolver servicios viejos.
+                try {
+                    val refresh = gatt.javaClass.getMethod("refresh")
+                    val ok = refresh.invoke(gatt) as Boolean
+                    log("Caché BLE limpiada: $ok")
+                } catch (e: Exception) {
+                    log("No se pudo limpiar caché: ${e.message}")
+                }
+                handler.postDelayed({ gatt.discoverServices() }, 500)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 isConnected.set(false)
                 writeChar = null
