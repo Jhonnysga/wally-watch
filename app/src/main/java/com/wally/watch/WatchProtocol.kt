@@ -65,6 +65,22 @@ object WatchProtocol {
     }
 
     /**
+     * Datos de usuario (18,4): u32 big-endian con género, edad, altura, peso.
+     * bit31=género(1=m), bits30-24=edad, bits23-15=altura cm,
+     * bits14-5=peso kg, bits4-0=unidad distancia(0=métrico).
+     */
+    fun buildUserInfo(): ByteArray {
+        val gender = 1 // masculino
+        val age = 30
+        val height = 175 // cm
+        val weight = 70 // kg
+        val unit = 0 // métrico
+        val packed = (gender shl 31) or (age shl 24) or (height shl 15) or (weight shl 5) or unit
+        val data = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(packed).array()
+        return buildFrame(CMD_NOTIFY, 4, data)
+    }
+
+    /**
      * Construye un frame completo: CD | len16BE | CMD | 01 | KEY | datalen16BE | DATA
      */
     fun buildFrame(cmd: Int, key: Int, data: ByteArray): ByteArray {

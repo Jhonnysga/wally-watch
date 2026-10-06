@@ -298,6 +298,10 @@ class BleManager(private val context: Context) {
             log("Sincronizando hora...")
             sendFrame(WatchProtocol.buildTimeSyncNow())
         }, 500)
+        handler.postDelayed({
+            log("Enviando datos de usuario...")
+            sendFrame(WatchProtocol.buildUserInfo())
+        }, 1000)
         pumpQueue()
     }
 
