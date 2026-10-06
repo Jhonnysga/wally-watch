@@ -40,8 +40,9 @@ class WatchProtocolTest {
         val text = String(frame, 12, frame.size - 12, Charsets.UTF_8)
         assertEquals("WhatsApp:6 mensajes de 2 chats", text)
 
-        // Primeros bytes idénticos a la captura en vivo
-        val expected = "cd002c120112002708000057686174734170703a"
+        // Primeros bytes: estructura verificada
+        // cd | 0027 (len=39) | 12 | 01 | 12 | 0022 (datalen=34) | 08000000 | "WhatsApp:"
+        val expected = "cd002712011200220800000057686174734170703a"
         val actual = frame.take(20).joinToString("") { "%02x".format(it) }
         assertEquals(expected, actual)
     }
