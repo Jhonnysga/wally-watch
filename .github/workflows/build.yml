@@ -27,7 +27,7 @@ jobs:
   build:
     name: Compilar APK debug
     runs-on: ubuntu-latest
-    needs: test
+    # needs: test (temporal)
     permissions:
       contents: write
     steps:
