@@ -181,7 +181,7 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
             "Telegram",
             "Prueba de notificación OK"
         )
-        addLog("Prueba enviada (Telegram/icon 8)")
+        addLog("Prueba enviada (Telegram/icon 1)")
     }
 
     // ---------- BleManager.Listener ----------

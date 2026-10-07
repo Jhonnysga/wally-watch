@@ -66,7 +66,7 @@ class NotifyListener : NotificationListenerService() {
         val ble = BleManager.get(this)
         if (ble.connected) {
             ble.sendNotification(iconId, finalTitle.ifEmpty { label }, body)
-            Log.d(TAG, "→ reloj [$label] $finalTitle")
+            Log.d(TAG, "→ reloj [$label] $finalTitle (pkg=$pkg)")
         } else {
             Log.d(TAG, "Reloj no conectado, notificación de $label en espera")
         }
