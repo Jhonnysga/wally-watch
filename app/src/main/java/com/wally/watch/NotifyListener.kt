@@ -44,12 +44,9 @@ class NotifyListener : NotificationListenerService() {
         // Telegram y otras usan MessagingStyle: extraer de EXTRA_MESSAGES
         if (body.isEmpty()) {
             val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
-            if (messages != null) {
-                val lastMsg = messages.lastOrNull()
-                val bundle = lastMsg as? android.os.Bundle
-                val msgText = bundle?.getCharSequence("text")?.toString().orEmpty()
-                if (msgText.isNotEmpty()) body = msgText.trim()
-            }
+                ?.mapNotNull { it as? Notification.MessagingStyle.Message }
+            val lastText = messages?.lastOrNull()?.text?.toString().orEmpty()
+            if (lastText.isNotEmpty()) body = lastText.trim()
         }
         // Título de conversación para MessagingStyle
         val convTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString().orEmpty()
