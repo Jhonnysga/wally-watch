@@ -149,8 +149,8 @@ object WatchProtocol {
         "com.twitter.android" -> 9
         "com.snapchat.android" -> 10
         "com.google.android.gm" -> 11 // Gmail
-        "com.android.mms" -> 12      // SMS
-        "com.google.android.dialer" -> 13
+        "com.android.mms" -> 1       // SMS: icono genérico (solo 1 y 8 funcionan)
+        "com.google.android.dialer" -> 1 // Teléfono: icono genérico
         "com.meta.ai", "ai.muse.mobile" -> 1 // Muse: icono genérico
         else -> 1 // genérico
     }

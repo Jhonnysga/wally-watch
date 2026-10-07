@@ -12,7 +12,6 @@ object Prefs {
     private const val FILE = "wally_watch_prefs"
     private const val KEY_MAC = "watch_mac"
     private const val KEY_FORWARD_ONGOING = "forward_ongoing"
-    private const val KEY_BEEP = "beep_on_notification"
     private const val PREFIX_APP = "app_enabled_"
 
     /** Apps con interruptor visible en la UI. */
@@ -57,15 +56,5 @@ object Prefs {
     fun setForwardOngoing(context: Context, value: Boolean) {
         init(context)
         prefs.edit().putBoolean(KEY_FORWARD_ONGOING, value).apply()
-    }
-
-    fun beepEnabled(context: Context): Boolean {
-        init(context)
-        return prefs.getBoolean(KEY_BEEP, false)
-    }
-
-    fun setBeepEnabled(context: Context, value: Boolean) {
-        init(context)
-        prefs.edit().putBoolean(KEY_BEEP, value).apply()
     }
 }
