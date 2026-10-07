@@ -159,7 +159,8 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
     private fun onConnectClicked() {
         if (!ensureBtPermissions()) return
         if (ble.connected) {
-            ble.disconnect()
+            addLog("Desconectando...")
+            WatchService.stop(this)
         } else {
             val mac = macInput.text.toString().trim()
             if (mac.isNotEmpty()) {
@@ -167,7 +168,7 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
                 ble.targetMac = mac
             }
             addLog("Conectando a ${ble.targetMac}...")
-            ble.connectToKnown()
+            WatchService.start(this)
         }
     }
 
