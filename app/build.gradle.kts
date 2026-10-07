@@ -11,8 +11,8 @@ android {
         applicationId = "com.wally.watch"
         minSdk = 26
         targetSdk = 34
-        versionCode = 23
-        versionName = "3.2"
+        versionCode = 24
+        versionName = "3.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
