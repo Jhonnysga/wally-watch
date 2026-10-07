@@ -121,6 +121,28 @@ class MainActivity : AppCompatActivity(), BleManager.Listener {
         }
         root.addView(testBtn.apply { setPadding(0, 16, 0, 0) })
 
+        // Interruptor: beep en notificaciones (sale por Bluetooth)
+        root.addView(Switch(this).apply {
+            text = "Beep al recibir notificación"
+            isChecked = Prefs.beepEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                Prefs.setBeepEnabled(this@MainActivity, checked)
+                addLog("Beep ${if (checked) "activado" else "desactivado"}")
+            }
+            setPadding(0, 16, 0, 0)
+        })
+
+        // Interruptor: reenviar notificaciones en curso (llamadas)
+        root.addView(Switch(this).apply {
+            text = "Reenviar llamadas (en curso)"
+            isChecked = Prefs.forwardOngoing(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                Prefs.setForwardOngoing(this@MainActivity, checked)
+                addLog("Llamadas ${if (checked) "activadas" else "desactivadas"}")
+            }
+            setPadding(0, 8, 0, 0)
+        })
+
         // Log
         root.addView(TextView(this).apply {
             text = "Registro:"

@@ -1,6 +1,8 @@
 package com.wally.watch
 
 import android.app.Notification
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -67,6 +69,16 @@ class NotifyListener : NotificationListenerService() {
         if (ble.connected) {
             ble.sendNotification(iconId, finalTitle.ifEmpty { label }, body)
             Log.d(TAG, "→ reloj [$label] $finalTitle (pkg=$pkg)")
+            // Beep en el teléfono (sale por Bluetooth si el reloj está como salida de audio)
+            if (Prefs.beepEnabled(this)) {
+                try {
+                    val tg = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+                    tg.startTone(ToneGenerator.TONE_PROP_BEEP, 200)
+                    tg.release()
+                } catch (e: Exception) {
+                    Log.w(TAG, "No se pudo reproducir beep: ${e.message}")
+                }
+            }
         } else {
             Log.d(TAG, "Reloj no conectado, notificación de $label en espera")
         }
