@@ -46,7 +46,8 @@ class BleManager(private val context: Context) {
     private val isConnected = AtomicBoolean(false)
     private val writeQueue = ConcurrentLinkedQueue<ByteArray>()
     private val writeInFlight = AtomicBoolean(false)
-    private var reconnectAttempts = 0
+    private var userDisconnected = false
+    private var reconnectScanActive = false
     private var cccdTimeoutRunnable: Runnable? = null
 
     val connected: Boolean get() = isConnected.get()
@@ -137,12 +138,14 @@ class BleManager(private val context: Context) {
     }
 
     fun connectToKnown() {
+        userDisconnected = false
         val device = adapter?.getRemoteDevice(targetMac)
         if (device != null) connect(device) else startScan()
     }
 
     fun disconnect() {
-        reconnectAttempts = Int.MAX_VALUE // no reconectar
+        userDisconnected = true // no reconectar
+        stopReconnectScan()
         gatt?.disconnect()
         gatt?.close()
         gatt = null
@@ -156,7 +159,8 @@ class BleManager(private val context: Context) {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 log("GATT conectado, descubriendo servicios...")
-                reconnectAttempts = 0
+                userDisconnected = false
+                stopReconnectScan()
                 handler.postDelayed({
                     val started = gatt.discoverServices()
                     log("discoverServices() iniciado: $started")
@@ -308,14 +312,52 @@ class BleManager(private val context: Context) {
     }
 
     private fun scheduleReconnect() {
-        if (reconnectAttempts >= 5) {
-            log("Sin reconexión tras 5 intentos")
+        if (userDisconnected) {
+            log("Desconexión manual, no reconectar")
             return
         }
-        reconnectAttempts++
-        val delay = (reconnectAttempts * 5_000).toLong()
-        log("Reintentando en ${delay / 1000}s (intento $reconnectAttempts/5)...")
-        handler.postDelayed({ if (!isConnected.get()) connectToKnown() }, delay)
+        log("Iniciando escaneo de reconexión...")
+        startReconnectScan()
+    }
+
+    private fun startReconnectScan() {
+        if (reconnectScanActive || isConnected.get() || userDisconnected) return
+        reconnectScanActive = true
+        log("Escaneando reloj para reconexión...")
+        val settings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+            .build()
+        try {
+            adapter?.bluetoothLeScanner?.startScan(null, settings, reconnectScanCallback)
+        } catch (e: Exception) {
+            log("Error en escaneo: ${e.message}")
+            reconnectScanActive = false
+            // Reintentar en 10s
+            handler.postDelayed({ if (!isConnected.get() && !userDisconnected) startReconnectScan() }, 10_000)
+        }
+    }
+
+    private fun stopReconnectScan() {
+        if (!reconnectScanActive) return
+        reconnectScanActive = false
+        try { adapter?.bluetoothLeScanner?.stopScan(reconnectScanCallback) } catch (_: Exception) {}
+    }
+
+    private val reconnectScanCallback = object : ScanCallback() {
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            val device = result.device
+            if (device.address.equals(targetMac, ignoreCase = true)) {
+                log("Reloj detectado, conectando inmediatamente...")
+                stopReconnectScan()
+                connect(device)
+            }
+        }
+
+        override fun onScanFailed(errorCode: Int) {
+            log("Escaneo falló: $errorCode, reintentando...")
+            reconnectScanActive = false
+            handler.postDelayed({ if (!isConnected.get() && !userDisconnected) startReconnectScan() }, 10_000)
+        }
     }
 
     // ---------- Escritura ----------

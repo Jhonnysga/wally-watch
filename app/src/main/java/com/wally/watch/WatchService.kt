@@ -5,10 +5,14 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 
 /**
@@ -45,6 +49,8 @@ class WatchService : Service() {
     }
 
     private lateinit var ble: BleManager
+    private val handler = Handler(Looper.getMainLooper())
+    private var monitorRunnable: Runnable? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -61,9 +67,11 @@ class WatchService : Service() {
                 if (!ble.connected) {
                     ble.connectToKnown()
                 }
+                startMonitoring()
             }
             ACTION_STOP -> {
                 Log.d(TAG, "Deteniendo servicio")
+                stopMonitoring()
                 ble.disconnect()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -77,9 +85,45 @@ class WatchService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        stopMonitoring()
         ble.disconnect()
         super.onDestroy()
         Log.d(TAG, "Servicio destruido")
+    }
+
+    private fun startMonitoring() {
+        stopMonitoring()
+        monitorRunnable = object : Runnable {
+            override fun run() {
+                checkNotificationListener()
+                // Verificar cada 5 minutos
+                handler.postDelayed(this, 5 * 60 * 1000)
+            }
+        }
+        handler.postDelayed(monitorRunnable!!, 5 * 60 * 1000)
+    }
+
+    private fun stopMonitoring() {
+        monitorRunnable?.let { handler.removeCallbacks(it) }
+        monitorRunnable = null
+    }
+
+    private fun checkNotificationListener() {
+        val enabled = isNotificationListenerEnabled()
+        Log.d(TAG, "Listener activo: $enabled")
+        if (!enabled) {
+            Log.w(TAG, "Listener no vinculado, solicitando rebind...")
+            try {
+                NotifyListener.requestRebind(ComponentName(this, NotifyListener::class.java))
+            } catch (e: Exception) {
+                Log.w(TAG, "Rebind falló: ${e.message}")
+            }
+        }
+    }
+
+    private fun isNotificationListenerEnabled(): Boolean {
+        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+        return flat?.contains(packageName) == true
     }
 
     private fun createChannel() {
